@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--
+  Base HTML pour toutes les pages du front (layout commun).
+  - En-tête : Titre, liens de navigation (Accueil / CPV), info du portail ODS.
+  - Corps   : Contenu injecté via le bloc nommé "content".
+  - Styles  : Front-end/static/styles.css (aucune lib externe).
+
+  Remarque:
+  - Les variables de contexte `ods_base` et `dataset_id` sont passées par Flask.
+  - Le front est volontairement minimal (HTML/CSS + un peu de JS côté accueil).
+-->
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Appels d'offres — BOAMP (HTML/CSS)</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-content">
+        <div>
+          <h1>Appels d'offres Formation — Île‑de‑France</h1>
+          <p class="muted">Source : BOAMP via Opendatasoft. Rendu serveur (HTML/CSS seulement).</p>
+        </div>
+        <div class="muted small">
+          <a href="/" class="muted" style="margin-right:12px;">Accueil</a>
+          <a href="/cpv" class="muted">CPV formation</a>
+          <span style="margin-left:12px;">•</span>
+          <span style="margin-left:12px;">{{ ods_base }} • {{ dataset_id }}</span>
+        </div>
+      </div>
+    </header>
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">
+      <div class="container muted small">
+        Front: HTML/CSS • Back: Python Flask • Aucune dépendance JS côté client
+      </div>
+    </footer>
+  </body>
+  </html>

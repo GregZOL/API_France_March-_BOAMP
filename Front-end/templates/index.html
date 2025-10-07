@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{#
+  Page SSR avancée (optionnelle). Conserve la logique d'affichage côté serveur.
+  Non utilisée par défaut, mais utile comme exemple de rendu sans JS.
+#}
+{% block content %}
+
+  {% if error %}
+    <div class="alert alert-error">
+      <div><strong>Erreur:</strong> {{ error }}</div>
+      {% if debug_url %}<div class="small wrap">URL: {{ debug_url }}</div>{% endif %}
+    </div>
+  {% endif %}
+
+  {% if not error and debug_url %}
+    <div class="alert alert-info small">
+      <div>Requête ODS: <span class="wrap">{{ debug_url }}</span></div>
+    </div>
+  {% endif %}
+
+  <div class="layout">
+    <aside class="sidebar">
+      <form method="get" class="card space-y">
+        <div class="section">
+          <div class="section-title">Domaines (toggles)</div>
+          <div class="grid grid-2">
+            {% for name, terms in keyword_buckets.items() %}
+              <label class="row">
+                <input type="checkbox" name="selectedBucket" value="{{ name }}" {% if name in selected_buckets %}checked{% endif %}>
+                <span>{{ name }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          <label class="row small">
+            <input type="checkbox" name="useTraining" {% if use_training %}checked{% endif %}>
+            <span>Filtrer sur « Formations »</span>
+          </label>
+        </div>
+
+        <div class="grid grid-1-1-1 gap">
+          <div class="section">
+            <label class="row">
+              <input type="checkbox" name="useKeywords" {% if use_keywords %}checked{% endif %}>
+              <span class="label">Mots-clés</span>
+            </label>
+            <input class="input" name="keywords" value="{{ keywords }}" placeholder="laisser vide pour ne pas filtrer" />
+          </div>
+
+          <div class="section">
+            <label class="row">
+              <input type="checkbox" name="useCpv" {% if use_cpv %}checked{% endif %}>
+              <span class="label">CPV (préfixe)</span>
+            </label>
+            <input class="input" name="cpvPrefix" value="{{ cpv_prefix }}" placeholder="ex: 805" />
+          </div>
+
+          <div class="section">
+            <label class="label">Pagination</label>
+            <select class="input" name="pageSize">
+              {% for n in [10,20,50,100] %}
+                <option value="{{ n }}" {% if page_size == n %}selected{% endif %}>{{ n }}/page</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" name="useBuyer" {% if use_buyer %}checked{% endif %}>
+            <span class="label">Acheteur</span>
+          </label>
+          <select class="input" name="buyer">
+            <option value="">— Sélectionner —</option>
+            {% for b in available_buyers %}
+              <option value="{{ b }}" {% if buyer == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" name="useDate" {% if use_date %}checked{% endif %}>
+            <span class="label">Période</span>
+          </label>
+          <div class="grid grid-2 gap">
+            <input type="date" class="input" name="dateFrom" value="{{ date_from }}" placeholder="début" />
+            <input type="date" class="input" name="dateTo" value="{{ date_to }}" placeholder="fin" />
+          </div>
+        </div>
+
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" name="useDept" {% if use_dept %}checked{% endif %}>
+            <span class="label">Départements (IDF)</span>
+          </label>
+          <div class="grid grid-2">
+            {% for d in idf_departements %}
+              <label class="row">
+                <input type="checkbox" name="deptCodes" value="{{ d.code }}" {% if d.code in dept_codes %}checked{% endif %}>
+                <span>{{ d.name }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="row gap">
+          <button type="submit" class="btn">Rafraîchir</button>
+          <a class="btn ghost" href="/search?useDate=on&useTraining=on">Réinitialiser</a>
+        </div>
+      </form>
+      <div class="muted small">Astuce: « Réinitialiser » active uniquement la période.</div>
+    </aside>
+
+    <section class="content">
+      <div class="card">
+        <div class="card-header">
+          <div class="muted small">{{ total if total is not none else '—' }} résultats</div>
+          <div>Page {{ page }} / {{ total_pages }}</div>
+        </div>
+        <div class="list">
+          {% for r in records %}
+            <article class="item">
+              <a href="{{ r.href }}" target="_blank" class="title">{{ r.title }}</a>
+              <div class="muted small">
+                {% if r.date_iso %}Publié le {{ r.date_iso }}{% endif %}
+                {% if r.date_iso and r.ref %} • {% endif %}
+                {% if r.ref %}Réf. {{ r.ref }}{% endif %}
+              </div>
+              <div class="badges">
+                {% if r.buyer %}<span class="badge" title="Acheteur">{{ r.buyer }}</span>{% endif %}
+                {% if r.dept %}
+                  {% if r.dept is iterable and r.dept is not string %}
+                    {% for d in r.dept %}<span class="badge" title="Département">{{ d }}</span>{% endfor %}
+                  {% else %}
+                    <span class="badge" title="Département">{{ r.dept }}</span>
+                  {% endif %}
+                {% endif %}
+                {% if r.cpv %}
+                  {% if r.cpv is iterable and r.cpv is not string %}
+                    {% for c in r.cpv[:4] %}<span class="badge" title="CPV">{{ c }}</span>{% endfor %}
+                  {% else %}
+                    <span class="badge" title="CPV">{{ r.cpv }}</span>
+                  {% endif %}
+                {% endif %}
+              </div>
+              {% if r.description %}
+                <div class="desc">{{ r.description|string|truncate(280, True, '…') }}</div>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+        <div class="card-footer">
+          {# Build pagination links preserving current filters #}
+          {% set base_qs = request.query_string.decode('utf-8') %}
+          {% set prev = page - 1 %}
+          {% set next = page + 1 %}
+          {% macro replace_query(qs, k, v) %}
+            {%- set pairs = [] -%}
+            {%- for part in qs.split('&') if part -%}
+              {%- if part.split('=')[0] != k -%}
+                {%- do pairs.append(part) -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- if v is not none -%}
+              {%- do pairs.append(k ~ '=' ~ v) -%}
+            {%- endif -%}
+            {{- pairs|join('&') -}}
+          {% endmacro %}
+          <div class="row space-between">
+            <a class="btn" href="/?{{ replace_query(base_qs, 'page', prev if prev > 0 else 1) }}">Précédent</a>
+            <span>Page {{ page }} / {{ total_pages }}</span>
+            <a class="btn" href="/?{{ replace_query(base_qs, 'page', next if next <= total_pages else total_pages) }}">Suivant</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+{% endblock %}

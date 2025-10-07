@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{#
+  Page informative listant un sous-ensemble de codes CPV pertinents pour la
+  formation (organisme de formation). Source: sélection utilisateur.
+  Colonnes: Code, Domaine, Description.
+#}
+{% block content %}
+  <section class="card">
+    <h2>Codes CPV – Formation</h2>
+    <p class="muted">Liste des codes CPV les plus pertinents pour un organisme de formation, avec leur description. Ces codes sont appliqués par défaut dans la page d’accueil.</p>
+    <div style="overflow:auto;">
+      <table style="width:100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">Code</th>
+            <th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">Domaine</th>
+            <th style="text-align:left; border-bottom:1px solid var(--border); padding:8px;">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cpvs %}
+          <tr>
+            <td style="padding:8px; border-bottom:1px solid var(--border); font-variant-numeric: tabular-nums;">{{ c.code }}</td>
+            <td style="padding:8px; border-bottom:1px solid var(--border);">{{ c.domaine }}</td>
+            <td style="padding:8px; border-bottom:1px solid var(--border);">{{ c.description }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

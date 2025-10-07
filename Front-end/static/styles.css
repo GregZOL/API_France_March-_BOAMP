@@ -1,0 +1,81 @@
+/*
+  Feuille de styles minimaliste (sans dépendance) pour une UI claire.
+  Objectifs:
+  - Lisibilité, compacité, pas de framework CSS externe.
+  - Classes utilitaires simples (card, btn, input, badge...).
+  - Mode sombre léger par défaut.
+
+  Structure:
+  - Variables CSS (couleurs)
+  - Containers et layout (header, main, grid)
+  - Composants (btn, input, card, badges)
+  - États (urgent, fav)
+*/
+:root {
+  --bg: #0b0b0c;
+  --card: #131316;
+  --text: #e6e6ea;
+  --muted: #a1a1aa;
+  --border: #2a2a2e;
+  --accent: #3b82f6;
+  --badge: #1f2937;
+  --error: #7f1d1d;
+  --info: #0b3a6f;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+
+.container { max-width: 1152px; margin: 0 auto; padding: 16px; }
+.site-header { border-bottom: 1px solid var(--border); background: #0d0d10; }
+.site-footer { border-top: 1px solid var(--border); padding: 12px 0; margin-top: 24px; }
+.header-content { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.wrap { word-break: break-all; }
+
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
+@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+
+.sidebar { display: flex; flex-direction: column; gap: 8px; }
+.content { display: flex; flex-direction: column; gap: 16px; }
+
+.card { border: 1px solid var(--border); background: var(--card); border-radius: 8px; padding: 12px; }
+.card-header, .card-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.card-footer { border-top: 1px solid var(--border); border-bottom: none; }
+.space-y > * + * { margin-top: 12px; }
+
+.section { display: flex; flex-direction: column; gap: 6px; }
+.section-title { font-weight: 600; color: var(--muted); }
+.row { display: flex; align-items: center; gap: 8px; }
+.space-between { justify-content: space-between; }
+.gap { gap: 8px; }
+
+.label { font-weight: 600; font-size: 13px; }
+.input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); background: #0f0f12; color: var(--text); border-radius: 6px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; background: var(--accent); color: white; border: 0; border-radius: 6px; text-decoration: none; cursor: pointer; }
+.btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+.grid { display: grid; gap: 8px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-1-1-1 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 960px) { .grid-1-1-1 { grid-template-columns: 1fr; } .grid-2 { grid-template-columns: 1fr; } }
+
+.list { display: flex; flex-direction: column; }
+.item { padding: 12px; border-bottom: 1px solid var(--border); }
+.title { color: #f0f0f6; font-weight: 700; text-decoration: none; }
+.title:hover { text-decoration: underline; }
+.urgent { border-left: 3px solid #ef4444; background: #1b0f10; }
+.fav { cursor: pointer; font-size: 16px; opacity: .9; }
+.fav.on { color: #facc15; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; background: var(--badge); color: #e5e7eb; border-radius: 999px; font-size: 12px; border: 1px solid #374151; }
+.chip { position: relative; padding-right: 22px; }
+.chip .chip-x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-weight: 700; cursor: pointer; opacity: .8; }
+.chip .chip-x:hover { opacity: 1; }
+.desc { margin-top: 8px; font-size: 13px; opacity: .95; }
+
+.alert { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
+.alert-error { background: #190c0c; border-color: #3f1f1f; color: #fecaca; }
+.alert-info { background: #0b1725; border-color: #173152; color: #caeaff; }

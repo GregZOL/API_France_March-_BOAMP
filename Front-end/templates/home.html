@@ -1,0 +1,554 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Collecte et filtres</h2>
+    <p class="muted">Organisme de formation: par défaut, nous ciblons les avis de formation (catégorie 24 + CPV formation) et une période récente.</p>
+    <div class="space-y" id="filters">
+      <div class="grid grid-1-1-1 gap">
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" id="useTraining" checked>
+            <span class="label">Formations (recommandé)</span>
+          </label>
+          <div class="muted small">Active une liste blanche de CPV formation et la catégorie de services 24.</div>
+        </div>
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" id="useDate" checked>
+            <span class="label">Période</span>
+          </label>
+          <div class="grid grid-2 gap">
+            <input type="date" class="input" id="dateFrom" placeholder="début" />
+            <input type="date" class="input" id="dateTo" placeholder="fin" />
+          </div>
+        </div>
+        <div class="section">
+          <label class="label">Pagination</label>
+          <select class="input" id="pageSize">
+            <option value="10">10/page</option>
+            <option value="20" selected>20/page</option>
+            <option value="50">50/page</option>
+            <option value="100">100/page</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-1-1-1 gap">
+        <div class="section">
+          <label class="label">Nature</label>
+          <label class="row"><input type="checkbox" id="natureAO" checked><span>Appel d'offre (nouveaux marchés)</span></label>
+          <label class="row"><input type="checkbox" id="natureAT"><span>Attribution (veille concurrentielle)</span></label>
+        </div>
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" id="useKeywords" checked>
+            <span class="label">Mots-clés</span>
+          </label>
+          <input class="input" id="keywords" value="formation" placeholder="ex: e-learning OR \"ingénierie pédagogique\"" />
+          <div class="muted small">Conseils: e-learning, "formation à distance", LMS, Moodle, "ingénierie pédagogique", SCORM, xAPI…</div>
+        </div>
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" id="useCpv">
+            <span class="label">CPV (préfixe)</span>
+          </label>
+          <input class="input" id="cpvPrefix" placeholder="ex: 805 ou 8051" />
+          <div class="muted small">805* = services de formation (plus ciblé: 8051*).</div>
+        </div>
+        <div class="section">
+          <label class="row">
+            <input type="checkbox" id="useBuyer">
+            <span class="label">Acheteur</span>
+          </label>
+          <input class="input" id="buyer" placeholder="ex: Région Île-de-France" />
+        </div>
+        <div class="section">
+          <label class="label">Tri</label>
+          <select class="input" id="sort">
+            <option value="date" selected>Par date de publication (récent → ancien)</option>
+            <option value="deadline">Par date limite (plus urgent d'abord)</option>
+            <option value="relevance">Par pertinence (si mots-clés)</option>
+          </select>
+          <label class="row small" style="margin-top:6px;"><input type="checkbox" id="infinite"> Pagination infinie</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <label class="row">
+          <input type="checkbox" id="useDept">
+          <span class="label">Départements (Île‑de‑France)</span>
+        </label>
+        <div class="grid grid-2">
+          <label class="row"><input type="checkbox" class="dept" value="75"><span>75 – Paris</span></label>
+          <label class="row"><input type="checkbox" class="dept" value="77"><span>77 – Seine-et-Marne</span></label>
+          <label class="row"><input type="checkbox" class="dept" value="78"><span>78 – Yvelines</span></label>
+          <label class="row"><input type="checkbox" class="dept" value="91"><span>91 – Essonne</span></label>
+          <label class="row"><input type="checkbox" class="dept" value="92"><span>92 – Hauts-de-Seine</span></label>
+          <label class="row"><input type="checkbox" class="dept" value="93"><span>93 – Seine-Saint-Denis</span></label>
+          <label class="row"><input type="checkbox" class="dept" value="94"><span>94 – Val-de-Marne</span></label>
+          <label class="row"><input type="checkbox" class="dept" value="95"><span>95 – Val d'Oise</span></label>
+        </div>
+        <div class="row gap" style="margin-top:6px;">
+          <input class="input" id="deptSearch" list="deptList" placeholder="Rechercher un département (code ou nom)" style="flex:1;" />
+          <button class="btn" id="addDept" type="button">Ajouter</button>
+          <datalist id="deptList"></datalist>
+        </div>
+        
+      </div>
+
+      <div class="row gap">
+        <button id="launch" class="btn">Lancer l'API</button>
+        <button id="reset" class="btn ghost" type="button">Réinitialiser</button>
+        <div id="status" class="muted small"></div>
+      </div>
+      <div class="section">
+        <div class="label">Filtres actifs</div>
+        <div id="activeFilters" class="badges"></div>
+      </div>
+      <div class="section">
+        <div class="label">Profils de recherche</div>
+        <div class="row gap">
+          <input class="input" id="profileName" placeholder="Nom du profil" />
+          <button class="btn" id="saveProfile" type="button">Sauver</button>
+          <select class="input" id="profiles" style="max-width:220px;"></select>
+          <button class="btn ghost" id="loadProfile" type="button">Charger</button>
+          <button class="btn ghost" id="deleteProfile" type="button">Supprimer</button>
+          <button class="btn" id="shareLink" type="button">Copier le lien</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="results" style="display:none;">
+    <!-- Liste des résultats + outils (debug, sélection, export) -->
+    <div class="card-header">
+      <button class="btn" id="prev">Précédent</button>
+      <div class="muted small"><span id="count">—</span> résultats • Page <span id="page">1</span> / <span id="pages">1</span></div>
+      <button class="btn" id="next">Suivant</button>
+    </div>
+      <div class="row space-between" style="padding:8px 12px; border-bottom:1px solid var(--border);">
+        <div class="small wrap" id="debug"></div>
+        <div class="row gap">
+          <label class="row small"><input type="checkbox" id="selectAll"> Tout sélectionner</label>
+          <button class="btn ghost" id="clearSel">Tout décocher</button>
+          <button class="btn" id="export" disabled>Exporter CSV</button>
+          <span class="small muted" id="selCount">0 sélectionné</span>
+        </div>
+      </div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <script>
+    // Script côté client (vanilla JS) — commandes et états de l'UI
+    const el = (tag, className, text) => { const e = document.createElement(tag); if (className) e.className = className; if (text != null) e.textContent = text; return e; };
+
+    const q = (id) => document.getElementById(id); // raccourci DOM
+    const launchBtn = q('launch');
+    const resetBtn = q('reset');
+    const statusEl = q('status');
+    const resultsEl = q('results');
+    const countEl = q('count');
+    const debugEl = q('debug');
+    const listEl = q('list');
+    const pageEl = q('page');
+    const pagesEl = q('pages');
+    const prevBtn = q('prev');
+    const nextBtn = q('next');
+
+    const useTraining = q('useTraining');
+    const useDate = q('useDate');
+    const dateFrom = q('dateFrom');
+    const dateTo = q('dateTo');
+    const pageSize = q('pageSize');
+    const useKeywords = q('useKeywords');
+    const keywords = q('keywords');
+    const useCpv = q('useCpv');
+    const cpvPrefix = q('cpvPrefix');
+    const useBuyer = q('useBuyer');
+    const buyer = q('buyer');
+    const useDept = q('useDept');
+    const natureAO = q('natureAO');
+    const natureAT = q('natureAT');
+    const sortSel = q('sort');
+    const infinite = q('infinite');
+    const deptSearch = q('deptSearch');
+    const addDeptBtn = q('addDept');
+    
+    const profileName = q('profileName');
+    const profilesSel = q('profiles');
+    const saveProfileBtn = q('saveProfile');
+    const loadProfileBtn = q('loadProfile');
+    const deleteProfileBtn = q('deleteProfile');
+    const shareLinkBtn = q('shareLink');
+
+    let currentPage = 1;
+    let totalPages = 1;
+
+    function iso(d) { return d.toISOString().slice(0,10); }
+    function setDefaultDates() {
+      const today = new Date();
+      const from = new Date(today.getTime() - 90*24*3600*1000);
+      const to = new Date(today.getTime() + 365*24*3600*1000);
+      dateFrom.value = iso(from);
+      dateTo.value = iso(to);
+    }
+
+    function gatherFilters(page) {
+      const params = new URLSearchParams();
+      params.set('pageSize', pageSize.value || '20');
+      params.set('page', String(page || 1));
+      if (useTraining.checked) params.set('useTraining', '1');
+      params.set('useDate', useDate.checked ? '1' : '0');
+      const sort = (sortSel && sortSel.value) || 'date';
+      if (sort && sort !== 'date') params.set('sort', sort);
+      if (useDate.checked) {
+        if (dateFrom.value) params.set('dateFrom', dateFrom.value);
+        if (dateTo.value) params.set('dateTo', dateTo.value);
+      }
+      if (useKeywords.checked && keywords.value.trim()) params.set('q', keywords.value.trim());
+      if (useCpv.checked && cpvPrefix.value.trim()) params.set('cpvPrefix', cpvPrefix.value.trim());
+      if (useBuyer.checked && buyer.value.trim()) params.set('buyer', buyer.value.trim());
+      {
+        const depts = Array.from(document.querySelectorAll('input.dept:checked')).map(e => e.value);
+        if (depts.length) {
+          for (const d of depts) params.append('deptCodes', d);
+        } else if (useDept.checked) {
+          // toggle is on but no selection; keep param logic consistent (no deptCodes added)
+        }
+      }
+      if (natureAO.checked) params.append('nature', 'AppelOffre');
+      if (natureAT.checked) params.append('nature', 'Attribution');
+      return params;
+    }
+
+    function setFiltersFromParams(params) {
+      useTraining.checked = params.get('useTraining') === '1';
+      const sd = params.get('useDate'); useDate.checked = sd !== '0';
+      dateFrom.value = params.get('dateFrom') || dateFrom.value;
+      dateTo.value = params.get('dateTo') || dateTo.value;
+      const s = params.get('sort'); if (sortSel && s) sortSel.value = s;
+      const qv = params.get('q')||''; useKeywords.checked = !!qv; keywords.value = qv;
+      const cpv = params.get('cpvPrefix')||''; useCpv.checked = !!cpv; cpvPrefix.value = cpv;
+      const b = params.get('buyer')||''; useBuyer.checked = !!b; buyer.value = b;
+      const deptCodes = params.getAll('deptCodes');
+      document.querySelectorAll('input.dept').forEach(e => e.checked = false);
+      if (deptCodes.length) { useDept.checked = true; document.querySelectorAll('input.dept').forEach(e => { if (deptCodes.includes(e.value)) e.checked = true; }); }
+      const nats = params.getAll('nature');
+      natureAO.checked = nats.includes('AppelOffre');
+      natureAT.checked = nats.includes('Attribution');
+      const pz = params.get('pageSize'); if (pz) pageSize.value = pz;
+      updateActiveFiltersView();
+    }
+
+    function refreshProfilesList() {
+      const data = JSON.parse(localStorage.getItem('profiles') || '{}');
+      profilesSel.innerHTML = '';
+      Object.keys(data).forEach(name => { const o = document.createElement('option'); o.value = name; o.textContent = name; profilesSel.appendChild(o); });
+    }
+
+    if (saveProfileBtn) saveProfileBtn.addEventListener('click', () => {
+      const name = (profileName.value||'').trim(); if (!name) { alert('Nom de profil requis'); return; }
+      const params = gatherFilters(1);
+      const data = JSON.parse(localStorage.getItem('profiles') || '{}');
+      data[name] = params.toString();
+      localStorage.setItem('profiles', JSON.stringify(data));
+      refreshProfilesList();
+    });
+    if (loadProfileBtn) loadProfileBtn.addEventListener('click', () => {
+      const name = profilesSel.value; if (!name) return;
+      const data = JSON.parse(localStorage.getItem('profiles') || '{}');
+      const qs = data[name]; if (!qs) return;
+      setFiltersFromParams(new URLSearchParams(qs));
+      run(1);
+    });
+    if (deleteProfileBtn) deleteProfileBtn.addEventListener('click', () => {
+      const name = profilesSel.value; if (!name) return;
+      const data = JSON.parse(localStorage.getItem('profiles') || '{}');
+      delete data[name]; localStorage.setItem('profiles', JSON.stringify(data));
+      refreshProfilesList();
+    });
+    if (shareLinkBtn) shareLinkBtn.addEventListener('click', async () => {
+      const params = gatherFilters(1);
+      const link = location.origin + location.pathname + '?' + params.toString();
+      try { await navigator.clipboard.writeText(link); statusEl.textContent = 'Lien copié dans le presse-papiers'; } catch { prompt('Copiez ce lien:', link); }
+    });
+
+    function updateActiveFiltersView() {
+      const box = document.getElementById('activeFilters');
+      if (!box) return;
+      box.innerHTML = '';
+      const addChip = (label, action, value) => {
+        const s = el('span', 'badge chip');
+        s.textContent = label + ' ';
+        const x = el('span', 'chip-x', '×');
+        if (action) x.dataset.action = action;
+        if (value != null) x.dataset.value = value;
+        s.appendChild(x);
+        box.appendChild(s);
+      };
+      if (useTraining.checked) addChip('Formation', 'training');
+      if (useDate.checked) {
+        const f = dateFrom.value || '—';
+        const t = dateTo.value || '—';
+        addChip(`Période: ${f} → ${t}`, 'date');
+      }
+      if (natureAO.checked) addChip('Nature: AppelOffre', 'nature', 'AppelOffre');
+      if (natureAT.checked) addChip('Nature: Attribution', 'nature', 'Attribution');
+      if (useKeywords.checked && keywords.value.trim()) addChip('q: ' + keywords.value.trim(), 'q');
+      if (useCpv.checked && cpvPrefix.value.trim()) addChip('CPV: ' + cpvPrefix.value.trim() + '*', 'cpv');
+      if (useBuyer.checked && buyer.value.trim()) addChip('Acheteur: ' + buyer.value.trim(), 'buyer');
+      {
+        const depts = Array.from(document.querySelectorAll('input.dept:checked')).map(e => e.value);
+        if (depts.length) {
+          addChip('Départements: ' + depts.join(', '), 'dept');
+          // Chips unitaires pour retirer un seul département
+          depts.forEach(d => addChip('Dept ' + d, 'deptOne', d));
+        }
+      }
+      if (!box.children.length) box.appendChild(el('span', 'badge', 'Aucun filtre actif'));
+    }
+
+    async function run(page=1) {
+      currentPage = page;
+      launchBtn.disabled = true; prevBtn.disabled = true; nextBtn.disabled = true;
+      statusEl.textContent = 'Chargement…';
+      if (page === 1) listEl.innerHTML = '';
+      if (page === 1) resultsEl.style.display = 'none';
+      try {
+        const params = gatherFilters(currentPage);
+        const res = await fetch('/api/search?' + params.toString());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data && data.error) { statusEl.textContent = 'Erreur: ' + data.error; return; }
+        const items = Array.isArray(data.results || data.items) ? (data.results || data.items) : [];
+        const total = (data.total_count != null ? data.total_count : data.total) ?? null;
+        countEl.textContent = total != null ? String(total) : String(items.length);
+        debugEl.textContent = data.debug_url || '';
+        totalPages = total && parseInt(pageSize.value, 10) ? Math.max(1, Math.ceil(total / parseInt(pageSize.value, 10))) : 1;
+        pageEl.textContent = String(currentPage);
+        pagesEl.textContent = String(totalPages);
+
+        // Reorder to pin favorites (local)
+        const favs = new Set(JSON.parse(localStorage.getItem('favRefs') || '[]'));
+        const sorted = items.slice().sort((a,b) => (favs.has(String(b.ref||''))?1:0)-(favs.has(String(a.ref||''))?1:0));
+        for (const it of sorted) {
+          const item = el('article', 'item');
+          if (it.deadline_iso) {
+            const now = new Date();
+            const dl = new Date(it.deadline_iso+'T00:00:00');
+            const diff = (dl - now) / (1000*3600*24);
+            if (diff <= 7 && diff >= -1) item.classList.add('urgent');
+          }
+          // selection checkbox
+          const selRow = el('div', 'row small');
+          const pick = el('input'); pick.type = 'checkbox'; pick.className = 'pick';
+          selRow.appendChild(pick);
+          const fav = el('span', 'fav', '☆');
+          fav.title = 'Marquer comme favori';
+          selRow.appendChild(el('span', '', ' Sélectionner '));
+          selRow.appendChild(fav);
+          item.appendChild(selRow);
+
+          const a = el('a', 'title'); a.href = it.href || it.permalink || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = it.title || 'Avis';
+          const meta = el('div', 'muted small');
+          const parts = [];
+          if (it.date_iso) parts.push('Publié le ' + it.date_iso);
+          if (it.ref) parts.push('Réf. ' + it.ref);
+          meta.textContent = parts.join(' • ');
+          const badges = el('div', 'badges');
+          if (it.buyer) badges.appendChild(el('span', 'badge', it.buyer));
+          if (it.dept) {
+            if (Array.isArray(it.dept)) { for (const d of it.dept.slice(0, 3)) badges.appendChild(el('span', 'badge', String(d))); }
+            else { badges.appendChild(el('span', 'badge', String(it.dept))); }
+          }
+          if (it.cpv) {
+            if (Array.isArray(it.cpv)) { for (const c of it.cpv.slice(0, 3)) badges.appendChild(el('span', 'badge', String(c))); }
+            else { badges.appendChild(el('span', 'badge', String(it.cpv))); }
+          }
+          item.appendChild(a);
+          item.appendChild(meta);
+          // deadline and buyer address
+          if (it.deadline_iso) item.appendChild(el('div', 'small', 'Date limite: ' + it.deadline_iso));
+          if (it.buyer_address) item.appendChild(el('div', 'small', 'Acheteur (nom et adresse officiels): ' + String(it.buyer_address)));
+          if (it.description) {
+            const d = String(it.description);
+            item.appendChild(el('div', 'desc', d.length > 280 ? d.slice(0, 277) + '…' : d));
+          }
+          if (it.place) item.appendChild(el('div', 'small', 'Lieu d\'exécution: ' + String(it.place)));
+          if (it.procedure) item.appendChild(el('div', 'small', 'Procédure: ' + String(it.procedure)));
+          if (it.market_type) item.appendChild(el('div', 'small', 'Type de marché: ' + String(it.market_type)));
+          if (it.budget) item.appendChild(el('div', 'small', 'Budget/Montant: ' + String(it.budget)));
+          item.appendChild(badges);
+          listEl.appendChild(item);
+
+          // attach data for export
+          pick.dataset.title = a.textContent || '';
+          pick.dataset.href = a.href || '';
+          pick.dataset.deadline = it.deadline_iso || '';
+          pick.dataset.buyer = (it.buyer_address || it.buyer || '') + '';
+          pick.addEventListener('change', updateSelectionSummary);
+          const key = String(it.ref||'');
+          if (favs.has(key)) { fav.classList.add('on'); fav.textContent='★'; }
+          fav.addEventListener('click', () => {
+            const set = new Set(JSON.parse(localStorage.getItem('favRefs') || '[]'));
+            if (set.has(key)) { set.delete(key); fav.classList.remove('on'); fav.textContent='☆'; }
+            else { set.add(key); fav.classList.add('on'); fav.textContent='★'; }
+            localStorage.setItem('favRefs', JSON.stringify(Array.from(set)));
+          });
+        }
+
+        resultsEl.style.display = '';
+        statusEl.textContent = items.length ? 'Terminé' : 'Aucun résultat';
+        prevBtn.disabled = currentPage <= 1;
+        nextBtn.disabled = currentPage >= totalPages;
+        updateSelectionSummary();
+      } catch (e) {
+        statusEl.textContent = 'Erreur: ' + (e && e.message ? e.message : String(e));
+      } finally {
+        launchBtn.disabled = false;
+      }
+    }
+
+    function updateSelectionSummary() {
+      const picks = Array.from(document.querySelectorAll('input.pick'));
+      const checked = picks.filter(p => p.checked);
+      q('selCount').textContent = `${checked.length} sélectionné${checked.length>1?'s':''}`;
+      q('export').disabled = checked.length === 0;
+      const allChecked = picks.length>0 && checked.length === picks.length;
+      q('selectAll').checked = allChecked;
+    }
+
+    function exportCSV() {
+      const checked = Array.from(document.querySelectorAll('input.pick:checked'));
+      if (!checked.length) return;
+      const rows = [["Intitule","Lien","Date_limite","Nom_Adresse_Acheteur"]];
+      for (const p of checked) {
+        rows.push([p.dataset.title||'', p.dataset.href||'', p.dataset.deadline||'', p.dataset.buyer||'']);
+      }
+      const escape = (s) => '"' + String(s).replace(/"/g,'""') + '"';
+      const csv = '\ufeff' + rows.map(r => r.map(escape).join(';')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'avis_selection.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function resetFilters() {
+      useTraining.checked = true;
+      useDate.checked = true; setDefaultDates();
+      pageSize.value = '20';
+      useKeywords.checked = true; keywords.value = 'formation';
+      useCpv.checked = false; cpvPrefix.value = '';
+      useBuyer.checked = false; buyer.value = '';
+      useDept.checked = false; document.querySelectorAll('input.dept').forEach(e => e.checked = false);
+      currentPage = 1;
+      pageEl.textContent = '1'; pagesEl.textContent = '1';
+      updateActiveFiltersView();
+    }
+
+    launchBtn.addEventListener('click', () => { currentPage = 1; run(1); });
+    resetBtn.addEventListener('click', () => { resetFilters(); statusEl.textContent = 'Filtres réinitialisés.'; });
+    prevBtn.addEventListener('click', () => { if (currentPage > 1) run(currentPage - 1); });
+    nextBtn.addEventListener('click', () => { run(currentPage + 1); });
+    q('export').addEventListener('click', exportCSV);
+    
+    q('selectAll').addEventListener('change', (e) => {
+      const picks = document.querySelectorAll('input.pick');
+      picks.forEach(p => p.checked = e.target.checked);
+      updateSelectionSummary();
+    });
+    q('clearSel').addEventListener('click', () => {
+      const picks = document.querySelectorAll('input.pick');
+      picks.forEach(p => p.checked = false);
+      q('selectAll').checked = false;
+      updateSelectionSummary();
+    });
+
+    // Dept datalist and add from search
+    const DEPTS = [
+      ["75","Paris"],["77","Seine-et-Marne"],["78","Yvelines"],["91","Essonne"],["92","Hauts-de-Seine"],["93","Seine-Saint-Denis"],["94","Val-de-Marne"],["95","Val d'Oise"],
+      ["59","Nord"],["62","Pas-de-Calais"],["80","Somme"],["02","Aisne"],["60","Oise"],
+      ["09","Ariège"],["11","Aude"],["12","Aveyron"],["30","Gard"],["31","Haute-Garonne"],["32","Gers"],["34","Hérault"],["46","Lot"],["48","Lozère"],["65","Hautes-Pyrénées"],["66","Pyrénées-Orientales"],["81","Tarn"],["82","Tarn-et-Garonne"]
+    ];
+    const list = document.getElementById('deptList');
+    if (list) { DEPTS.forEach(([c,n]) => { const o = document.createElement('option'); o.value = `${c} - ${n}`; list.appendChild(o); }); }
+    function addDeptFromInput() {
+      if (!deptSearch) return;
+      const v = (deptSearch.value||'').trim(); if (!v) return;
+      let code = v.split('-')[0].trim();
+      if (!/^[0-9]{2,3}$/.test(code)) { const hit = DEPTS.find(([c,n]) => n.toLowerCase() === v.toLowerCase()); if (hit) code = hit[0]; }
+      const cb = Array.from(document.querySelectorAll('input.dept')).find(e => e.value === code);
+      if (cb) { cb.checked = true; useDept.checked = true; updateActiveFiltersView(); }
+      deptSearch.value = '';
+    }
+    if (addDeptBtn) addDeptBtn.addEventListener('click', addDeptFromInput);
+    if (deptSearch) deptSearch.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addDeptFromInput(); } });
+    // When 'Départements (Île-de-France)' is toggled, (un)check IDF codes automatically
+    const IDF_CODES = ['75','77','78','91','92','93','94','95'];
+    if (useDept) useDept.addEventListener('change', () => {
+      document.querySelectorAll('input.dept').forEach(e => { if (IDF_CODES.includes(e.value)) e.checked = useDept.checked; });
+      updateActiveFiltersView();
+    });
+
+    // Infinite scroll
+    let isLoadingMore = false;
+    window.addEventListener('scroll', async () => {
+      if (!infinite || !infinite.checked) return;
+      if (isLoadingMore) return;
+      if (currentPage >= totalPages) return;
+      const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 200);
+      if (!nearBottom) return;
+      isLoadingMore = true;
+      await run(currentPage + 1);
+      isLoadingMore = false;
+    });
+
+    // Wire live updates for the active filter summary
+    [useTraining, useDate, dateFrom, dateTo, pageSize, useKeywords, keywords, useCpv, cpvPrefix, useBuyer, buyer, useDept, natureAO, natureAT]
+      .forEach(elm => elm && elm.addEventListener('change', updateActiveFiltersView));
+    document.querySelectorAll('input.dept').forEach(e => e.addEventListener('change', updateActiveFiltersView));
+
+    // Click on chips 'x' to clear filters
+    document.getElementById('activeFilters').addEventListener('click', (ev) => {
+      const t = ev.target;
+      if (!(t && t.classList && t.classList.contains('chip-x'))) return;
+      const action = t.dataset.action;
+      const val = t.dataset.value;
+      switch (action) {
+        case 'training': useTraining.checked = false; break;
+        case 'date': useDate.checked = false; dateFrom.value=''; dateTo.value=''; break;
+        case 'nature':
+          if (val === 'AppelOffre') natureAO.checked = false;
+          else if (val === 'Attribution') natureAT.checked = false;
+          break;
+        case 'q': useKeywords.checked = false; keywords.value=''; break;
+        case 'cpv': useCpv.checked = false; cpvPrefix.value=''; break;
+        case 'buyer': useBuyer.checked = false; buyer.value=''; break;
+        case 'dept':
+          useDept.checked = false; document.querySelectorAll('input.dept').forEach(e => e.checked = false); break;
+        case 'deptOne':
+          const cb = Array.from(document.querySelectorAll('input.dept')).find(e => e.value === val);
+          if (cb) cb.checked = false;
+          // if none left, also turn off toggle
+          if (Array.from(document.querySelectorAll('input.dept:checked')).length === 0) useDept.checked = false;
+          break;
+      }
+      updateActiveFiltersView();
+      run(1);
+    });
+
+    // Init defaults on load
+    setDefaultDates();
+    refreshProfilesList();
+    // If URL has params, apply them
+    if (location.search && location.search.length > 1) {
+      setFiltersFromParams(new URLSearchParams(location.search));
+    }
+    updateActiveFiltersView();
+  </script>
+{% endblock %}
