@@ -1,37 +1,50 @@
-API France Marché — Minimal Front (HTML/CSS) + Back (Python)
+# API France Marché – BOAMP
 
-What’s inside
-- Front-end/: Server-rendered HTML templates and CSS (no JS)
-- Back-end/: Minimal Flask app with Opendatasoft (ODS) logic
+## Structure du dépôt
+- `Back-end/` : application Flask historique qui expose une API JSON et des templates serveur.
+- `Front-end/` : gabarits HTML d'origine servis par Flask (optionnel désormais).
+- `docs/` : SPA statique (HTML/CSS/JS) consommant directement l'API publique Opendatasoft. C'est ce dossier qu'il faut publier sur GitHub Pages.
+- `.venv/`, scripts `Launch_API.*` : helpers locaux pour démarrer la version Flask.
 
-Run locally
-- Python 3.10+
-- Install: `pip install -r Back-end/requirements.txt`
-- Start: `python Back-end/app.py`
-- Open: http://localhost:8000 (page d'accueil avec un bouton « Lancer l'API »)
-- Avancé (filtres): http://localhost:8000/search
- - CPV (liste formation): http://localhost:8000/cpv
- - Par défaut, le filtre « Formations » est appliqué (useTraining=on).
+## Lancer l'API Flask (optionnel)
+```bash
+python -m venv .venv
+.venv\Scripts\activate  # PowerShell
+pip install -r Back-end/requirements.txt
+python Back-end/app.py
+```
+L'interface est alors disponible sur http://localhost:8000/ (accueil) et http://localhost:8000/search (version SSR).
 
-Configuration (optional)
-- `ODS_BASE` (default: https://boamp-datadila.opendatasoft.com)
-- `DATASET_ID` (default: boamp)
-- `ODS_APIKEY` (facultatif si le portail le requiert)
-- `PREFER_EXPLORE` (1 par défaut): tente Explore v2.1 d'abord puis retombe en v1 si la clause WHERE est refusée (4xx). Mettre `0` pour tenter d'abord v1.
-- `ALLOW_INSECURE_SSL` (0 par défaut): si `1`, désactive la vérification SSL (à éviter; utiliser plutôt certifi qui est installé par défaut)
-- `REQUEST_TIMEOUT_SECONDS` (30 par défaut)
-- `RESULTS_CACHE_TTL_SECONDS` (60 par défaut): cache mémoire des résultats
-- `AUTO_FALLBACK_INSECURE_SSL` (1 par défaut): en cas d'erreur CERTIFICATE_VERIFY_FAILED, retente une fois en mode non vérifié pour éviter un blocage utilisateur. Préférez fournir un CA local plutôt que de laisser ceci activé en production.
-- `ODS_APIKEY` (optional if your portal requires a key)
+Variables d'environnement principales si vous utilisez Flask :
+- `ODS_BASE` (défaut : https://boamp-datadila.opendatasoft.com)
+- `DATASET_ID` (défaut : boamp)
+- `ODS_APIKEY` (facultatif si le portail l'exige)
+- Voir `Back-end/app.py` pour les options de cache, SSL, fallback Explore/v1.
 
-Notes
-- The app prefers ODS Explore v2.1 and automatically falls back to Records v1.
-- All filters are server-rendered. No front-end JavaScript is required.
-- To refresh the cached dataset schema, add `?refreshSchema=1` to the URL.
-- SSL: si vous êtes derrière un proxy d’entreprise, placez le certificat racine dans `Back-end/local_ca.pem` (ou définissez `LOCAL_CA_FILE`/`SSL_CERT_FILE`). Les lanceurs le détectent automatiquement.
- - Par défaut, les résultats sont filtrés sur les CPV formation: 80500000, 80510000, 80533100, 80570000, 80000000, 80553000, 79632000, 79952000. Voir `/cpv` pour la liste et les descriptions.
+## SPA statique (docs/)
+Le dossier `docs/` contient :
+- `index.html` : interface principale filtrant les avis BOAMP via fetch côté navigateur.
+- `cpv.html` : rappel des codes CPV « formation » appliqués par défaut.
+- `styles.css`, `app.js` : assets du front.
 
-Repository cleanup
-- Previous Next.js apps and Windows packaging are now redundant. Once you
-  validate this minimal implementation, we can safely delete the old folders:
-  `Virtual Factory/` and `VF test/` (and anything under them).
+### Tester en local
+Servez le dossier `docs/` avec n'importe quel serveur statique (Python, Node, etc.) pour éviter les blocages liés à `file://` :
+```bash
+cd docs
+python -m http.server 8001
+# puis ouvrir http://localhost:8001/index.html
+```
+
+### Publier sur GitHub Pages
+1. Commitez le dossier `docs/` et poussez votre branche principale (`main`).
+2. Sur GitHub : *Settings → Pages → Build and deployment*.
+3. Source : `Deploy from a branch`. Branche : `main`. Dossier : `/docs`.
+4. Sauvegardez ; l'URL générée est disponible après quelques minutes. La SPA interroge directement l'API ODS, aucun back-end n'est requis.
+
+### Personnalisation
+Modifiez `ODS_BASE`, `DATASET_ID` ou ajoutez une clé dans `app.js` si vous utilisez un portail Opendatasoft privé. Prévoir les entêtes CORS sur le portail cible.
+
+## Notes diverses
+- Les anciens dossiers `Front-end/` et `Back-end/` sont conservés pour référence ou exécution locale. GitHub Pages n'en a pas besoin.
+- Les filtres « Formations » activent automatiquement la liste blanche de CPV et la catégorie de services 24 dans la SPA.
+- Aucune dépendance externe n'est embarquée côté navigateur ; tout est en HTML/CSS/JS vanilla.

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Appels d'offres BOAMP – SPA</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-content">
+        <div>
+          <h1>Appels d'offres Formation – Île-de-France</h1>
+          <p class="muted">Source : BOAMP via Opendatasoft. Application 100 % statique.</p>
+        </div>
+        <div class="muted small">
+          <a href="./index.html" class="muted" style="margin-right:12px;">Accueil</a>
+          <a href="./cpv.html" class="muted">CPV formation</a>
+          <span style="margin-left:12px;">•</span>
+          <span style="margin-left:12px;">boamp-datadila.opendatasoft.com • boamp</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>Filtres de recherche</h2>
+        <p class="muted">
+          Cette version consomme directement l'API Opendatasoft. Les filtres « Formations » préparent les requêtes avec la liste blanche CPV et la catégorie de services 24.
+        </p>
+
+        <div class="space-y" id="filters">
+          <div class="grid grid-1-1-1 gap">
+            <div class="section">
+              <label class="row">
+                <input type="checkbox" id="useTraining" checked />
+                <span class="label">Formations (CPV + catégorie 24)</span>
+              </label>
+              <div class="muted small">Active les filtres dédiés aux prestations de formation.</div>
+            </div>
+            <div class="section">
+              <label class="row">
+                <input type="checkbox" id="useDate" checked />
+                <span class="label">Période</span>
+              </label>
+              <div class="grid grid-2 gap">
+                <input type="date" class="input" id="dateFrom" placeholder="début" />
+                <input type="date" class="input" id="dateTo" placeholder="fin" />
+              </div>
+            </div>
+            <div class="section">
+              <label class="label">Pagination</label>
+              <select class="input" id="pageSize">
+                <option value="10">10/page</option>
+                <option value="20" selected>20/page</option>
+                <option value="50">50/page</option>
+                <option value="100">100/page</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-1-1-1 gap">
+            <div class="section">
+              <label class="label">Nature</label>
+              <label class="row"><input type="checkbox" id="natureAO" checked /><span>Appel d'offre</span></label>
+              <label class="row"><input type="checkbox" id="natureAT" /><span>Attribution</span></label>
+            </div>
+            <div class="section">
+              <label class="row">
+                <input type="checkbox" id="useKeywords" checked />
+                <span class="label">Mots-clés</span>
+              </label>
+              <input class="input" id="keywords" value="formation" placeholder='ex : "formation à distance" OR e-learning' />
+              <div class="muted small">Utilise la recherche plein texte ODS.</div>
+            </div>
+            <div class="section">
+              <label class="row">
+                <input type="checkbox" id="useCpv" />
+                <span class="label">CPV (préfixe)</span>
+              </label>
+              <input class="input" id="cpvPrefix" placeholder="ex : 805 ou 8051" />
+              <div class="muted small">Filtre les codes CPV contenant le préfixe.</div>
+            </div>
+            <div class="section">
+              <label class="row">
+                <input type="checkbox" id="useBuyer" />
+                <span class="label">Acheteur</span>
+              </label>
+              <input class="input" id="buyer" placeholder="ex : Région Île-de-France" />
+            </div>
+            <div class="section">
+              <label class="label">Tri</label>
+              <select class="input" id="sort">
+                <option value="date" selected>Date de publication (récent → ancien)</option>
+                <option value="deadline">Date limite (urgent d'abord)</option>
+                <option value="relevance">Pertinence (si mots-clés)</option>
+              </select>
+              <label class="row small" style="margin-top:6px;">
+                <input type="checkbox" id="infinite" />
+                <span>Pagination infinie</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="section">
+            <label class="row">
+              <input type="checkbox" id="useDept" />
+              <span class="label">Départements (Île-de-France par défaut)</span>
+            </label>
+            <div class="grid grid-2">
+              <label class="row"><input type="checkbox" class="dept" value="75" /><span>75 – Paris</span></label>
+              <label class="row"><input type="checkbox" class="dept" value="77" /><span>77 – Seine-et-Marne</span></label>
+              <label class="row"><input type="checkbox" class="dept" value="78" /><span>78 – Yvelines</span></label>
+              <label class="row"><input type="checkbox" class="dept" value="91" /><span>91 – Essonne</span></label>
+              <label class="row"><input type="checkbox" class="dept" value="92" /><span>92 – Hauts-de-Seine</span></label>
+              <label class="row"><input type="checkbox" class="dept" value="93" /><span>93 – Seine-Saint-Denis</span></label>
+              <label class="row"><input type="checkbox" class="dept" value="94" /><span>94 – Val-de-Marne</span></label>
+              <label class="row"><input type="checkbox" class="dept" value="95" /><span>95 – Val-d'Oise</span></label>
+            </div>
+            <div class="row gap" style="margin-top:6px;">
+              <input class="input" id="deptSearch" list="deptList" placeholder="Rechercher un département (code ou nom)" style="flex:1;" />
+              <button class="btn" id="addDept" type="button">Ajouter</button>
+              <datalist id="deptList"></datalist>
+            </div>
+          </div>
+
+          <div class="row gap">
+            <button id="launch" class="btn" type="button">Lancer la recherche</button>
+            <button id="reset" class="btn ghost" type="button">Réinitialiser</button>
+            <div id="status" class="muted small"></div>
+          </div>
+
+          <div class="section">
+            <div class="label">Filtres actifs</div>
+            <div id="activeFilters" class="badges"></div>
+          </div>
+
+          <div class="section">
+            <div class="label">Profils de recherche (localStorage)</div>
+            <div class="row gap">
+              <input class="input" id="profileName" placeholder="Nom du profil" />
+              <button class="btn" id="saveProfile" type="button">Sauver</button>
+              <select class="input" id="profiles" style="max-width:220px;"></select>
+              <button class="btn ghost" id="loadProfile" type="button">Charger</button>
+              <button class="btn ghost" id="deleteProfile" type="button">Supprimer</button>
+              <button class="btn" id="shareLink" type="button">Copier le lien</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card hidden" id="results">
+        <div class="card-header">
+          <button class="btn" id="prev" type="button">Précédent</button>
+          <div class="muted small"><span id="count">0</span> résultats • Page <span id="page">1</span> / <span id="pages">1</span></div>
+          <button class="btn" id="next" type="button">Suivant</button>
+        </div>
+        <div class="row space-between" style="padding:8px 12px; border-bottom:1px solid var(--border);">
+          <div class="small wrap" id="debug"></div>
+          <div class="row gap small muted" id="summary"></div>
+        </div>
+        <div class="list" id="list"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container muted small">
+        Front statique (HTML/CSS/JS) • Données BOAMP via API Opendatasoft • Aucune dépendance serveur
+      </div>
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
